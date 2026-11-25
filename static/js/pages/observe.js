@@ -81,3 +81,11 @@ export function observeFateOrder() {
 export function filterByFate(rows, fate) {
   return (rows || []).filter((r) => !fate || r["命运"] === fate);
 }
+
+/** probe-11 多探头串扰隔离（五页核文案锚点） */
+export const PROBE_ISOLATION = {
+  enabled: true,
+  readOnlyApi: '/api/串扰隔离',
+  page: '/串扰隔离.html',
+  copy: '报文流卡片可见探头标识与隔离命运；邻探头同键硬写命运为「串扰隔离」。',
+};

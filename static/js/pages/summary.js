@@ -82,3 +82,11 @@ export function formatMean(v) {
 export function summaryHint() {
   return "汇总按站点+指标分组；均值来自入栏缓冲读数。";
 }
+
+/** probe-11 多探头串扰隔离（五页核文案锚点） */
+export const PROBE_ISOLATION = {
+  enabled: true,
+  readOnlyApi: '/api/串扰隔离',
+  page: '/串扰隔离.html',
+  copy: '站点汇总账按探头隔离键分组；串扰影子均值只在只读对账轨，绝不充本探头正式均值。',
+};

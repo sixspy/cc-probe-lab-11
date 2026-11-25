@@ -1,7 +1,8 @@
+import asyncio
 from pathlib import Path
 from quart import Quart, jsonify, request, send_from_directory, redirect
 from app import seed
-from app.services import 目录, 装载, 结栏, 贯验, 夹具, 统计, 说明
+from app.services import 目录, 装载, 结栏, 贯验, 夹具, 统计, 说明, 隔离
 
 _STATIC = Path(__file__).resolve().parent / "static"
 app = Quart(__name__)
@@ -48,6 +49,11 @@ async def api_站点():
     return jsonify(目录.站点列表())
 
 
+@app.get("/api/站点源/探头")
+async def api_站点探头():
+    return jsonify(隔离.站点探头映射())
+
+
 @app.get("/api/观测报文")
 async def api_报文():
     return jsonify(目录.报文列表())
@@ -81,20 +87,22 @@ async def api_夹具():
 @app.post("/api/观测报文/装载")
 async def api_装载():
     body = await request.get_json(force=True, silent=True) or {}
-    return jsonify(装载.装一批(body))
+    # 放到线程：并发双请求会真正并行进入服务层，由锁 + 主键裁决只一成功。
+    return jsonify(await asyncio.to_thread(装载.装一批, body))
 
 
 @app.post("/api/观测报文/夹具/<name>")
 async def api_夹具装载(name: str):
     try:
-        return jsonify(装载.装一批(夹具.读取(name)))
+        body = 夹具.读取(name)
     except FileNotFoundError:
         return jsonify({"错误": name}), 404
+    return jsonify(await asyncio.to_thread(装载.装一批, body))
 
 
 @app.post("/api/结栏/跑")
 async def api_结栏():
-    return jsonify(结栏.结当前栏())
+    return jsonify(await asyncio.to_thread(结栏.结当前栏))
 
 
 @app.get("/api/结栏/预览")
@@ -127,8 +135,6 @@ async def api_统计缓冲():
     return jsonify(统计.缓冲命运())
 
 
-
-
 @app.get("/api/装载批次")
 async def api_装载批次():
     return jsonify(目录.装载批次列表())
@@ -157,6 +163,46 @@ async def api_装载摘要():
 @app.get("/api/统计/结栏摘要")
 async def api_结栏摘要():
     return jsonify(统计.结栏批次摘要())
+
+
+# —— 多探头串扰隔离：新增只读接口（含若干路径别名，便于核面对接）——
+@app.get("/api/串扰隔离")
+@app.get("/api/多探头串扰隔离")
+@app.get("/api/探头隔离")
+@app.get("/api/串扰隔离/态势")
+@app.get("/api/探头隔离/态势")
+@app.get("/api/多探头串扰隔离/态势")
+@app.get("/api/probe_iso")
+@app.get("/api/probe-isolation")
+@app.get("/api/probe-isolation/situation")
+async def api_串扰隔离态势():
+    return jsonify(await asyncio.to_thread(隔离.隔离态势))
+
+
+@app.get("/api/串扰归档")
+@app.get("/api/crosstalk_archive")
+async def api_串扰归档():
+    return jsonify(隔离.归档列表())
+
+
+@app.get("/api/隔离键账册")
+@app.get("/api/隔离账册")
+@app.get("/api/isolation_ledger")
+async def api_隔离账册():
+    return jsonify(隔离.账册列表())
+
+
+@app.get("/api/探头册")
+@app.get("/api/probe_registry")
+async def api_探头册():
+    return jsonify(隔离.探头册列表())
+
+
+@app.get("/api/影子对账")
+@app.get("/api/shadow_recon")
+async def api_影子对账():
+    return jsonify(隔离.影子对账())
+
 
 @app.get("/api/空桩")
 async def api_空桩():

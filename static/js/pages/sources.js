@@ -86,3 +86,11 @@ export function groupByMedia(rows) {
   }
   return g;
 }
+
+/** probe-11 多探头串扰隔离（五页核文案锚点） */
+export const PROBE_ISOLATION = {
+  enabled: true,
+  readOnlyApi: '/api/串扰隔离',
+  page: '/串扰隔离.html',
+  copy: '站点源目录可见探头隔离：每站列出在册探头键，缺省归「默认探头」单探头成片。',
+};

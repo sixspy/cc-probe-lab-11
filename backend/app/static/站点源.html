@@ -16,18 +16,42 @@
     <div class="门槛条" id="门槛条"></div>
     <header class="顶牌" style="margin-bottom:10px">
       <h1 style="font-size:22px">站点源</h1>
-      <div class="骨">传感站登记目录。</div>
+      <div class="骨">传感站登记目录。同站可有多支探头，按探头隔离入栏键。</div>
     </header>
 
-    <section class="卷">
-      <div class="表绕"><table><thead><tr><th>源键</th><th>名称</th><th>介质</th><th>区域</th><th>说明</th></tr></thead><tbody id="表"></tbody></table></div>
+    <section class="卷" id="probe-isolation-sources" data-probe-isolation="sources">
+      <p class="说明">
+        <span class="徽章 ok">多探头串扰隔离</span>
+        同一站点的多支探头同测一个指标时，入栏键钉到<b>探头标识</b>，不混键、不混汇总。
+        此处目录可见每站<b>探头隔离</b>在册情况；钉键账册与串扰影子见
+        <a href="/串扰隔离.html">「串扰隔离」只读接口页 →</a>
+      </p>
+      <div class="表绕"><table><thead><tr><th>源键</th><th>名称</th><th>介质</th><th>区域</th><th>说明</th><th>探头隔离（在册探头键）</th></tr></thead><tbody id="表"></tbody></table></div>
     </section>
     <script>
     (async () => {
-      const rows = await 探栏.getJSON("/api/站点源");
+      const [rows, probes] = await Promise.all([
+        探栏.getJSON("/api/站点源"),
+        探栏.getJSON("/api/探头册").catch(() => []),
+      ]);
+      const map = {};
+      for (const p of (probes || [])) {
+        (map[p.站点键] = map[p.站点键] || []).push(p.探头键);
+      }
       const tb = document.getElementById("表");
       for (const r of rows) {
-        tb.appendChild(探栏.行(`<td>${探栏.安全文本(r.源键)}</td><td>${探栏.安全文本(r.名称)}</td><td>${探栏.安全文本(r.介质)}</td><td>${探栏.安全文本(r.区域)}</td><td>${探栏.安全文本(r.说明)}</td>`));
+        const ps = map[r.源键] || [];
+        const cell = ps.length
+          ? ps.map((p) => 探栏.徽章(p, "ok")).join(" ")
+          : `<span class="徽章">默认探头（单探头成片）</span>`;
+        tb.appendChild(探栏.行(
+          `<td>${探栏.安全文本(r.源键)}</td>` +
+          `<td>${探栏.安全文本(r.名称)}</td>` +
+          `<td>${探栏.安全文本(r.介质)}</td>` +
+          `<td>${探栏.安全文本(r.区域)}</td>` +
+          `<td>${探栏.安全文本(r.说明)}</td>` +
+          `<td data-probe-isolation-cell>${cell}</td>`
+        ));
       }
     })();
     </script>
@@ -42,6 +66,7 @@
     <a href="/坏点匣.html" >坏点匣</a>
     <a href="/栏贯验.html" >栏贯验</a>
     <a href="/站点源.html" class="亮">站点源</a>
+    <a href="/串扰隔离.html" >串扰隔离</a>
     <a href="/栏规.html" >栏规</a>
   </div></nav>
 

@@ -16,26 +16,40 @@
     <div class="门槛条" id="门槛条"></div>
     <header class="顶牌" style="margin-bottom:10px">
       <h1 style="font-size:22px">报文流</h1>
-      <div class="骨">装载后的传感报文命运流水。</div>
+      <div class="骨">装载后的传感报文命运流水。多探头按探头键隔离，串扰笔命运为「串扰隔离」并进只读归档。</div>
     </header>
 
-    <section class="卷">
+    <section class="卷" id="probe-isolation-observe" data-probe-isolation="observe">
+      <p class="说明">
+        <span class="徽章 ok">探头隔离可见</span>
+        每张报文卡片/每行流水都带<b>探头标识</b>；同站多探头同指标各走各的隔离键。
+        命运卡出现「串扰隔离」即邻探头同键硬写被挡，详见
+        <a href="/串扰隔离.html">串扰隔离只读账 →</a>
+      </p>
       <div class="横排 下距12" id="命运统计"></div>
-      <div class="表绕"><table><thead><tr><th>报文编号</th><th>站点</th><th>指标</th><th>读数</th><th>观测时</th><th>命运</th></tr></thead><tbody id="表"></tbody></table></div>
+      <div class="表绕"><table><thead><tr><th>报文编号</th><th>站点</th><th>指标</th><th>探头</th><th>读数</th><th>观测时</th><th>命运</th></tr></thead><tbody id="表"></tbody></table></div>
     </section>
-    <section class="卷"><div class="双栏"><p class="说明">报文是装载入流。命运应可读：已装载→已入栏/已坏点→已汇总。</p><div class="侧注">子方向：采集入库质控。行业皮：环境监测传感站。</div></div></section>
+    <section class="卷"><div class="双栏"><p class="说明">报文是装载入流。命运应可读：已装载→已入栏/已坏点→已汇总；探头串扰→串扰隔离（影子归档）。</p><div class="侧注">子方向：多探头采集入库隔离编排。行业皮：环境监测传感站。</div></div></section>
     <script>
     (async () => {
       const fate = await 探栏.getJSON("/api/统计/报文命运");
       const box = document.getElementById("命运统计");
       box.innerHTML = Object.entries(fate).map(([k,v]) =>
-        `<div class="水卡"><div class="数">${v}</div><div class="标">${探栏.安全文本(k)}</div></div>`
+        `<div class="水卡" data-fate="${探栏.安全文本(k)}"><div class="数">${v}</div><div class="标">${探栏.安全文本(k)}</div></div>`
       ).join("") || 探栏.空态("尚无命运统计");
       const rows = await 探栏.getJSON("/api/观测报文");
       const tb = document.getElementById("表");
-      if (!rows.length) { tb.innerHTML = `<tr><td colspan="6">${探栏.空态("尚无报文。回探栏台灌入栏成汇总样例。")}</td></tr>`; return; }
+      if (!rows.length) { tb.innerHTML = `<tr><td colspan="7">${探栏.空态("尚无报文。回探栏台灌入栏成汇总样例。")}</td></tr>`; return; }
       for (const r of rows) {
-        tb.appendChild(探栏.行(`<td>${探栏.安全文本(r.报文编号)}</td><td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td><td>${r.读数}</td><td>${探栏.安全文本(r.观测时)}</td><td>${探栏.徽章(r.命运)}</td>`));
+        tb.appendChild(探栏.行(
+          `<td>${探栏.安全文本(r.报文编号)}</td>` +
+          `<td>${探栏.安全文本(r.站点键)}</td>` +
+          `<td>${探栏.安全文本(r.指标键)}</td>` +
+          `<td>${探栏.徽章(r.探头键 || "默认探头")}</td>` +
+          `<td>${r.读数}</td>` +
+          `<td>${探栏.安全文本(r.观测时)}</td>` +
+          `<td>${探栏.徽章(r.命运)}</td>`
+        ));
       }
     })();
     </script>
@@ -50,6 +64,7 @@
     <a href="/坏点匣.html" >坏点匣</a>
     <a href="/栏贯验.html" >栏贯验</a>
     <a href="/站点源.html" >站点源</a>
+    <a href="/串扰隔离.html" >串扰隔离</a>
     <a href="/栏规.html" >栏规</a>
   </div></nav>
 

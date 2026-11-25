@@ -1,11 +1,19 @@
-"""结栏：入栏缓冲按站点+指标汇总物化。"""
+"""结栏：入栏缓冲按 探头隔离键（站点+指标+探头）汇总物化。"""
 from __future__ import annotations
 import json
 import uuid
 from collections import defaultdict
 from app.db import 连接
 from app.seed import 此刻
-from app.services import 目录
+from app.services import 目录, 隔离
+
+
+def _有效键(r) -> str:
+    键 = r["隔离键"] if "隔离键" in r.keys() else ""
+    if 键:
+        return 键
+    探头 = r["探头键"] if "探头键" in r.keys() else 隔离.默认探头键
+    return 隔离.计算隔离键(r["栏号"], r["站点键"], r["指标键"], 探头)
 
 
 def 结当前栏() -> dict:
@@ -17,19 +25,27 @@ def 结当前栏() -> dict:
         rows = conn.execute(
             "SELECT * FROM 入栏缓冲 WHERE 栏号=? AND 命运='在栏'", (栏号,)
         ).fetchall()
-        groups: dict[tuple[str, str], list] = defaultdict(list)
+        groups: dict[str, list] = defaultdict(list)
         for r in rows:
-            groups[(r["站点键"], r["指标键"])].append(r)
+            groups[_有效键(r)].append(r)
         汇总 = 0
         明细 = []
         时刻 = 此刻()
-        for (站点, 指标), evs in groups.items():
+        for 键, evs in groups.items():
+            站点 = evs[0]["站点键"]
+            指标 = evs[0]["指标键"]
+            探头 = evs[0]["探头键"] if "探头键" in evs[0].keys() else 隔离.默认探头键
+            # 硬保险：一个隔离键若混入多个探头，绝不合并均值。
+            探头集 = {e["探头键"] for e in evs if "探头键" in e.keys()} or {探头}
+            if len(探头集) > 1:
+                raise RuntimeError(f"探头隔离撕裂：键 {键} 混有多个探头 {探头集}")
             均值 = sum(float(e["读数"]) for e in evs) / len(evs)
             编号 = f"汇-{栏号}-{站点}-{指标}-{uuid.uuid4().hex[:6]}"
             conn.execute(
-                """INSERT INTO 站点汇总账(汇总编号,栏号,站点键,指标键,报文数,均值,物化时,命运)
-                   VALUES (?,?,?,?,?,?,?,?)""",
-                (编号, 栏号, 站点, 指标, len(evs), 均值, 时刻, "已汇总"),
+                """INSERT INTO 站点汇总账
+                   (汇总编号,栏号,站点键,指标键,报文数,均值,物化时,命运,探头键,隔离键)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (编号, 栏号, 站点, 指标, len(evs), 均值, 时刻, "已汇总", 探头, 键),
             )
             for e in evs:
                 conn.execute(
@@ -45,6 +61,8 @@ def 结当前栏() -> dict:
                 "汇总编号": 编号,
                 "站点键": 站点,
                 "指标键": 指标,
+                "探头键": 探头,
+                "隔离键": 键,
                 "报文数": len(evs),
                 "均值": round(均值, 4),
             })
@@ -67,7 +85,7 @@ def 结当前栏() -> dict:
 
 
 def 预览结栏() -> dict:
-    """只读：当前栏在栏缓冲按站点指标分组，不写库。"""
+    """只读：当前栏在栏缓冲按探头隔离键分组，不写库。"""
     规 = 目录.栏规()
     栏号 = 规.get("当前栏号", "B-demo")
     conn = 连接()
@@ -75,14 +93,17 @@ def 预览结栏() -> dict:
         rows = conn.execute(
             "SELECT * FROM 入栏缓冲 WHERE 栏号=? AND 命运='在栏'", (栏号,)
         ).fetchall()
-        groups: dict[tuple[str, str], list] = defaultdict(list)
+        groups: dict[str, list] = defaultdict(list)
         for r in rows:
-            groups[(r["站点键"], r["指标键"])].append(dict(r))
+            groups[_有效键(r)].append(dict(r))
         预览 = []
-        for (站点, 指标), evs in sorted(groups.items()):
+        for 键, evs in sorted(groups.items()):
+            e0 = evs[0]
             预览.append({
-                "站点键": 站点,
-                "指标键": 指标,
+                "隔离键": 键,
+                "探头键": e0.get("探头键", 隔离.默认探头键),
+                "站点键": e0["站点键"],
+                "指标键": e0["指标键"],
                 "报文数": len(evs),
                 "均值": round(sum(float(e["读数"]) for e in evs) / len(evs), 4),
             })

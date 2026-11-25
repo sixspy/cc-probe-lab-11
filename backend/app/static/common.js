@@ -33,7 +33,7 @@ function 安全文本(s) {
 }
 function 命运色(f) {
   if (["已入栏", "在栏", "已汇总", "对齐"].includes(f)) return "ok";
-  if (["已坏点", "撕裂"].includes(f)) return "warn";
+  if (["已坏点", "撕裂", "串扰隔离", "驳回-串扰隔离", "串扰"].includes(f)) return "warn";
   return "";
 }
 function 渲染水位(el, o) {

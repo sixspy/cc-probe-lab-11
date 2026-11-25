@@ -81,3 +81,11 @@ export function onlyInBar(rows) {
 export function bufferHint() {
   return "在栏可结；已汇总表示已物化进站点汇总账。";
 }
+
+/** probe-11 多探头串扰隔离（五页核文案锚点） */
+export const PROBE_ISOLATION = {
+  enabled: true,
+  readOnlyApi: '/api/串扰隔离',
+  page: '/串扰隔离.html',
+  copy: '入栏缓冲按探头隔离键（入栏键）列示；缓冲键与探头标识同票，邻探头同键硬写不进本列表而进串扰归档。',
+};

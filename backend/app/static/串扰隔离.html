@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>串扰隔离 · 探栏</title>
+  <link rel="stylesheet" href="/styles.css"/>
+  <script src="/common.js"></script>
+</head>
+<body>
+  <div class="壳" id="probe-isolation-page" data-probe-isolation="page">
+    <header class="顶牌">
+      <h1>探栏</h1>
+      <div class="骨">传感报文装载 → 标定/质控门槛入栏 → 站点汇总物化 → 坏点旁路 → 栏账互证<br/>皮：环境监测传感站 · 多探头采集入库隔离编排</div>
+    </header>
+    <div class="门槛条" id="门槛条"></div>
+    <header class="顶牌" style="margin-bottom:10px">
+      <h1 style="font-size:22px">多探头串扰隔离 · 只读账</h1>
+      <div class="骨" id="策略文">同站多探头同指标不混键、不混汇总；切流钉键账册 ＋ 双写影子归档。</div>
+    </header>
+
+    <section class="卷">
+      <div class="横排 下距12" id="计数卡"></div>
+      <p class="说明" id="形态文"></p>
+    </section>
+
+    <section class="卷">
+      <h2>现行键集合（在栏 · 按探头可区分）</h2>
+      <div class="表绕"><table><thead><tr><th>隔离键（入栏键）</th><th>钉住探头</th><th>站点</th><th>指标</th><th>栏号</th><th>在栏笔数</th><th>在栏均值</th></tr></thead><tbody id="现行表"></tbody></table></div>
+    </section>
+
+    <section class="卷">
+      <h2>影子对账（正式均值 vs 串扰影子均值）</h2>
+      <div class="表绕"><table><thead><tr><th>隔离键</th><th>站点</th><th>指标</th><th>本探头</th><th>正式笔数</th><th>正式均值</th><th>正式引用</th><th>影子笔数</th><th>影子均值</th><th>影子引用</th><th>污染</th></tr></thead><tbody id="对账表"></tbody></table></div>
+    </section>
+
+    <section class="卷">
+      <h2>串扰归档（只读 · 邻探头影子点）</h2>
+      <div class="表绕"><table><thead><tr><th>报文编号</th><th>硬写的本探头键</th><th>被冒探头</th><th>邻探头</th><th>站点</th><th>指标</th><th>读数</th><th>观测时</th><th>性质</th></tr></thead><tbody id="归档表"></tbody></table></div>
+    </section>
+
+    <section class="卷">
+      <h2>隔离键账册（切流按探头钉键）</h2>
+      <div class="表绕"><table><thead><tr><th>隔离键</th><th>探头</th><th>站点</th><th>指标</th><th>栏号</th><th>状态</th><th>钉住时</th></tr></thead><tbody id="账册表"></tbody></table></div>
+    </section>
+
+    <section class="卷">
+      <h2>探头册（站点源目录的探头隔离）</h2>
+      <div class="表绕"><table><thead><tr><th>站点</th><th>探头键</th><th>名称</th><th>指标</th><th>状态</th><th>登记时</th></tr></thead><tbody id="探头表"></tbody></table></div>
+    </section>
+  </div>
+
+  <nav class="底栏"><div class="底栏内">
+    <a href="/" >探栏台</a>
+    <a href="/报文流.html" >报文流</a>
+    <a href="/入栏缓冲.html" >入栏缓冲</a>
+    <a href="/站点汇总账.html" >站点汇总账</a>
+    <a href="/坏点匣.html" >坏点匣</a>
+    <a href="/栏贯验.html" >栏贯验</a>
+    <a href="/站点源.html" >站点源</a>
+    <a href="/串扰隔离.html" class="亮">串扰隔离</a>
+    <a href="/栏规.html" >栏规</a>
+  </div></nav>
+
+  <script>
+  const 空行 = (n, t) => `<tr><td colspan="${n}">${探栏.空态(t)}</td></tr>`;
+  async function 主() {
+    let d;
+    try { d = await 探栏.getJSON("/api/串扰隔离"); }
+    catch (e) { document.getElementById("策略文").textContent = "读取 /api/串扰隔离 失败：" + e; return; }
+
+    document.getElementById("形态文").textContent =
+      "工程形态：" + (d["工程形态"] || "") + "　｜　键模式：" + (d["隔离键模式"] || "");
+    const c = d["计数"] || {};
+    document.getElementById("计数卡").innerHTML = [
+      ["现行键数", c["现行键数"]], ["钉键数", c["钉键数"]],
+      ["探头数", c["探头数"]], ["串扰归档", c["串扰归档数"]],
+      ["隔离异常", c["隔离异常数"]],
+    ].map(([k, v]) => `<div class="水卡"><div class="数">${v ?? 0}</div><div class="标">${k}</div></div>`).join("");
+
+    const 现 = document.getElementById("现行表");
+    现.innerHTML = (d["现行键集合"] || []).length ? "" : 空行(7, "当前无在栏隔离键。灌两支同站同指标探头即可见键区分。");
+    for (const r of (d["现行键集合"] || [])) {
+      现.appendChild(探栏.行(
+        `<td><code>${探栏.安全文本(r.隔离键)}</code></td>` +
+        `<td>${探栏.徽章(r.探头键 || "默认探头")}</td>` +
+        `<td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td>` +
+        `<td>${探栏.安全文本(r.栏号)}</td><td>${r.在栏笔数}</td><td>${r.在栏均值 ?? ""}</td>`));
+    }
+
+    const 对 = document.getElementById("对账表");
+    对.innerHTML = (d["影子对账"] || []).length ? "" : 空行(11, "暂无对账。");
+    for (const r of (d["影子对账"] || [])) {
+      const dry = r["是否污染"] ? 探栏.徽章("污染", "warn") : 探栏.徽章("干净", "ok");
+      对.appendChild(探栏.行(
+        `<td><code>${探栏.安全文本(r.隔离键)}</code></td>` +
+        `<td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td>` +
+        `<td>${探栏.安全文本(r.探头键 || "")}</td>` +
+        `<td>${r.正式报文数 ?? 0}</td><td>${r.正式均值 ?? "—"}</td>` +
+        `<td>${探栏.安全文本(r.正式来源 || "")}</td>` +
+        `<td>${r.影子数 ?? 0}</td><td>${r.影子均值 ?? "—"}</td>` +
+        `<td>${探栏.安全文本(r.影子来源 || "串扰归档")}</td><td>${dry}</td>`));
+    }
+
+    const 档 = document.getElementById("归档表");
+    档.innerHTML = (d["归档"] || []).length ? "" : 空行(9, "归档为空：邻探头同键硬写后，串扰影子点会出现在这里（只读）。");
+    for (const r of (d["归档"] || [])) {
+      档.appendChild(探栏.行(
+        `<td>${探栏.安全文本(r.报文编号)}</td>` +
+        `<td><code>${探栏.安全文本(r.隔离键)}</code></td>` +
+        `<td>${探栏.安全文本(r.归属探头键)}</td>` +
+        `<td>${探栏.徽章(r.探头键, "warn")}</td>` +
+        `<td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td>` +
+        `<td>${r.读数}</td><td>${探栏.安全文本(r.观测时)}</td>` +
+        `<td>${探栏.徽章(r.性质 || "串扰影子", "warn")}</td>`));
+    }
+
+    const 册 = document.getElementById("账册表");
+    册.innerHTML = (d["账册"] || []).length ? "" : 空行(7, "账册为空。");
+    for (const r of (d["账册"] || [])) {
+      册.appendChild(探栏.行(
+        `<td><code>${探栏.安全文本(r.隔离键)}</code></td>` +
+        `<td>${探栏.徽章(r.探头键)}</td>` +
+        `<td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td>` +
+        `<td>${探栏.安全文本(r.栏号)}</td><td>${探栏.安全文本(r.状态)}</td>` +
+        `<td>${探栏.安全文本(r.钉住时)}</td>`));
+    }
+
+    const 探 = document.getElementById("探头表");
+    探.innerHTML = (d["探头册"] || []).length ? "" : 空行(6, "尚无显式探头登记；装载带「探头键」即自动入册。");
+    for (const r of (d["探头册"] || [])) {
+      探.appendChild(探栏.行(
+        `<td>${探栏.安全文本(r.站点键)}</td><td>${探栏.徽章(r.探头键)}</td>` +
+        `<td>${探栏.安全文本(r.名称)}</td><td>${探栏.安全文本(r.指标键)}</td>` +
+        `<td>${探栏.安全文本(r.状态)}</td><td>${探栏.安全文本(r.登记时)}</td>`));
+    }
+  }
+  主();
+  (async () => {
+    try {
+      const o = await 探栏.getJSON("/api/概览");
+      探栏.渲染门槛(document.getElementById("门槛条"), o.栏规 || {});
+    } catch (e) {}
+  })();
+  </script>
+</body>
+</html>

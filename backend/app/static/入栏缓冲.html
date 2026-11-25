@@ -19,16 +19,41 @@
       <div class="骨">过门槛、尚未结栏汇总的在途集合。</div>
     </header>
 
-    <section class="卷">
-      <div class="表绕"><table><thead><tr><th>报文编号</th><th>站点</th><th>指标</th><th>读数</th><th>栏号</th><th>命运</th></tr></thead><tbody id="表"></tbody></table></div>
+    <section class="卷" id="probe-isolation-buffer" data-probe-isolation="buffer">
+      <p class="说明">
+        <span class="徽章 ok">多探头串扰隔离已启用</span>
+        入栏键按<b>探头</b>钉死，<b>缓冲键与探头标识同票</b>（隔离键＝隔:栏:站:指标:探头）。
+        邻探头拿他探头入栏键硬写会被判串扰，只进只读归档，不进本键。
+        <a href="/串扰隔离.html">打开「串扰隔离」只读账 →</a>
+        <span id="隔离概览" class="铜字"></span>
+      </p>
+      <div class="表绕"><table><thead><tr><th>报文编号</th><th>站点</th><th>指标</th><th>探头</th><th>探头隔离键（入栏键）</th><th>读数</th><th>栏号</th><th>命运</th></tr></thead><tbody id="表"></tbody></table></div>
     </section>
     <script>
     (async () => {
+      try {
+        const iso = await 探栏.getJSON("/api/串扰隔离");
+        const nKey = (iso["现行键集合"] || []).length;
+        const nArc = (iso["归档"] || []).length;
+        document.getElementById("隔离概览").textContent =
+          `现行隔离键 ${nKey} · 串扰影子归档 ${nArc}`;
+      } catch (e) {}
       const rows = await 探栏.getJSON("/api/入栏缓冲");
       const tb = document.getElementById("表");
-      if (!rows.length) { tb.innerHTML = `<tr><td colspan="6">${探栏.空态("缓冲为空。")}</td></tr>`; return; }
+      if (!rows.length) { tb.innerHTML = `<tr><td colspan="8">${探栏.空态("缓冲为空。")}</td></tr>`; return; }
       for (const r of rows) {
-        tb.appendChild(探栏.行(`<td>${探栏.安全文本(r.报文编号)}</td><td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td><td>${r.读数}</td><td>${探栏.安全文本(r.栏号)}</td><td>${探栏.徽章(r.命运)}</td>`));
+        const probe = 探栏.安全文本(r.探头键 || "默认探头");
+        const key = 探栏.安全文本(r.隔离键 || r.入栏键 || "");
+        tb.appendChild(探栏.行(
+          `<td>${探栏.安全文本(r.报文编号)}</td>` +
+          `<td>${探栏.安全文本(r.站点键)}</td>` +
+          `<td>${探栏.安全文本(r.指标键)}</td>` +
+          `<td>${探栏.徽章(probe)}</td>` +
+          `<td><code title="${key}">${key}</code></td>` +
+          `<td>${r.读数}</td>` +
+          `<td>${探栏.安全文本(r.栏号)}</td>` +
+          `<td>${探栏.徽章(r.命运)}</td>`
+        ));
       }
     })();
     </script>
@@ -43,6 +68,7 @@
     <a href="/坏点匣.html" >坏点匣</a>
     <a href="/栏贯验.html" >栏贯验</a>
     <a href="/站点源.html" >站点源</a>
+    <a href="/串扰隔离.html" >串扰隔离</a>
     <a href="/栏规.html" >栏规</a>
   </div></nav>
 

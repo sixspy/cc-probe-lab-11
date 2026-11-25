@@ -88,3 +88,11 @@ export function homeActionHint(action) {
   };
   return m[action] || "";
 }
+
+/** probe-11 多探头串扰隔离（五页核文案锚点） */
+export const PROBE_ISOLATION = {
+  enabled: true,
+  readOnlyApi: '/api/串扰隔离',
+  page: '/串扰隔离.html',
+  copy: '探栏台可见多探头串扰隔离状态与 /串扰隔离.html 只读账入口。',
+};

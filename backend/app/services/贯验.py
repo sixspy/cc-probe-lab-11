@@ -1,7 +1,8 @@
-"""栏贯验：已汇总缓冲报文数 == 汇总账报文数之和。"""
+"""栏贯验：已汇总缓冲报文数 == 汇总账报文数之和；附加探头隔离专项。"""
 from __future__ import annotations
 from app.db import 连接
 from app.seed import 此刻
+from app.services import 隔离
 
 
 def 跑一次() -> dict:
@@ -17,6 +18,7 @@ def 跑一次() -> dict:
             "SELECT COALESCE(SUM(报文数),0) AS c FROM 站点汇总账"
         ).fetchone()["c"]
         坏点 = conn.execute("SELECT COUNT(*) AS c FROM 坏点匣").fetchone()["c"]
+        串扰归档 = conn.execute("SELECT COUNT(*) AS c FROM 串扰归档").fetchone()["c"]
         对齐 = 1 if int(已汇总缓冲) == int(汇总报文) else 0
         说明 = (
             "入栏已汇总与站点汇总报文数一致"
@@ -30,13 +32,22 @@ def 跑一次() -> dict:
             (时刻, 在栏, int(汇总报文), 坏点, 对齐, 说明),
         )
         conn.commit()
+        异常 = 隔离.隔离检查()
+        检查 = [
+            "探头隔离：入栏键均为单探头，无邻探头混写"
+            if not 异常
+            else "；".join(异常)
+        ]
         return {
             "时刻": 时刻,
             "在栏": 在栏,
             "已汇总缓冲": int(已汇总缓冲),
             "汇总报文": int(汇总报文),
             "坏点": 坏点,
+            "串扰归档": int(串扰归档),
             "是否对齐": bool(对齐),
+            "探头隔离干净": not 异常,
+            "检查": 检查 + 异常,
             "说明": 说明,
         }
     finally:
@@ -57,12 +68,17 @@ def 只读快照() -> dict:
             "SELECT COALESCE(SUM(报文数),0) AS c FROM 站点汇总账"
         ).fetchone()["c"]
         坏点 = conn.execute("SELECT COUNT(*) AS c FROM 坏点匣").fetchone()["c"]
+        串扰归档 = conn.execute("SELECT COUNT(*) AS c FROM 串扰归档").fetchone()["c"]
+        异常 = 隔离.隔离检查()
         return {
             "在栏": 在栏,
             "已汇总缓冲": int(已汇总缓冲),
             "汇总报文": int(汇总报文),
             "坏点": 坏点,
+            "串扰归档": int(串扰归档),
             "是否对齐": int(已汇总缓冲) == int(汇总报文),
+            "探头隔离干净": not 异常,
+            "检查": 异常 or ["探头隔离：入栏键均为单探头，无邻探头混写"],
         }
     finally:
         conn.close()

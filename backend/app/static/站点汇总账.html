@@ -16,21 +16,68 @@
     <div class="门槛条" id="门槛条"></div>
     <header class="顶牌" style="margin-bottom:10px">
       <h1 style="font-size:22px">站点汇总账</h1>
-      <div class="骨">结栏后按站点+指标物化的汇总。</div>
+      <div class="骨">结栏后按 站点+指标+<b>探头隔离键</b> 物化的汇总；串扰影子均值不得充本探头正式。</div>
     </header>
 
-    <section class="卷">
+    <section class="卷" id="probe-isolation-summary" data-probe-isolation="summary">
+      <p class="说明">
+        <span class="徽章 ok">探头隔离汇总</span>
+        汇总键与探头同票，邻探头读数不并入。影子对账把「本探头正式均值」与「串扰影子均值」分列。
+        完整只读账见 <a href="/串扰隔离.html">串扰隔离页 →</a>
+      </p>
       <div class="工具"><button class="按钮 青" id="结">结当前栏</button></div>
-      <div class="表绕"><table><thead><tr><th>汇总编号</th><th>栏号</th><th>站点</th><th>指标</th><th>报文数</th><th>均值</th></tr></thead><tbody id="表"></tbody></table></div>
+      <div class="表绕"><table><thead><tr><th>汇总编号</th><th>栏号</th><th>站点</th><th>指标</th><th>探头</th><th>隔离键</th><th>报文数</th><th>均值</th></tr></thead><tbody id="表"></tbody></table></div>
     </section>
+
+    <section class="卷" id="shadow-recon" data-probe-isolation="recon">
+      <h2>串扰影子对账（只读归档轨）</h2>
+      <div class="表绕"><table><thead><tr><th>隔离键</th><th>站点</th><th>指标</th><th>本探头</th><th>正式笔数</th><th>正式均值</th><th>影子笔数</th><th>串扰影子均值</th><th>污染</th></tr></thead><tbody id="对账表"></tbody></table></div>
+      <p class="说明">正式均值只来自站点汇总账/本探头缓冲；影子均值只来自只读「串扰归档」，两读引用不同，绝不互充。</p>
+    </section>
+
     <script>
+    async function 刷对账() {
+      const tb = document.getElementById("对账表");
+      let rows = [];
+      try { rows = await 探栏.getJSON("/api/影子对账"); } catch (e) { rows = []; }
+      if (!rows.length) {
+        tb.innerHTML = `<tr><td colspan="9">${探栏.空态("暂无串扰与对账。")}</td></tr>`;
+        return;
+      }
+      tb.innerHTML = "";
+      for (const r of rows) {
+        const polluted = r["是否污染"];
+        const badge = polluted ? 探栏.徽章("污染", "warn") : 探栏.徽章("干净", "ok");
+        tb.appendChild(探栏.行(
+          `<td><code>${探栏.安全文本(r.隔离键)}</code></td>` +
+          `<td>${探栏.安全文本(r.站点键)}</td>` +
+          `<td>${探栏.安全文本(r.指标键)}</td>` +
+          `<td>${探栏.安全文本(r.探头键 || r.归属探头 || "")}</td>` +
+          `<td>${r.正式报文数 ?? 0}</td>` +
+          `<td>${r.正式均值 ?? "—"}</td>` +
+          `<td>${r.影子数 ?? 0}</td>` +
+          `<td>${r.影子均值 ?? "—"}</td>` +
+          `<td>${badge}</td>`
+        ));
+      }
+    }
     async function 刷() {
       const rows = await 探栏.getJSON("/api/站点汇总账");
       const tb = document.getElementById("表"); tb.innerHTML = "";
-      if (!rows.length) { tb.innerHTML = `<tr><td colspan="6">${探栏.空态("尚无汇总。入栏后点结当前栏。")}</td></tr>`; return; }
-      for (const r of rows) {
-        tb.appendChild(探栏.行(`<td>${探栏.安全文本(r.汇总编号)}</td><td>${探栏.安全文本(r.栏号)}</td><td>${探栏.安全文本(r.站点键)}</td><td>${探栏.安全文本(r.指标键)}</td><td>${r.报文数}</td><td>${r.均值}</td>`));
+      if (!rows.length) { tb.innerHTML = `<tr><td colspan="8">${探栏.空态("尚无汇总。入栏后点结当前栏。")}</td></tr>`; }
+      else for (const r of rows) {
+        tb.appendChild(探栏.行(
+          `<td>${探栏.安全文本(r.汇总编号)}</td>` +
+          `<td>${探栏.安全文本(r.栏号)}</td>` +
+          `<td>${探栏.安全文本(r.站点键)}</td>` +
+          `<td>${探栏.安全文本(r.指标键)}</td>` +
+          `<td>${探栏.徽章(r.探头键 || "默认探头")}</td>` +
+          `<td><code>${探栏.安全文本(r.隔离键 || "")}</code></td>` +
+          `<td>${r.报文数}</td>` +
+          `<td>${r.均值}</td>`
+        ));
       }
+      await 刷对账();
     }
     document.getElementById("结").onclick = async () => { await 探栏.postJSON("/api/结栏/跑"); await 刷(); };
     刷();
@@ -46,6 +93,7 @@
     <a href="/坏点匣.html" >坏点匣</a>
     <a href="/栏贯验.html" >栏贯验</a>
     <a href="/站点源.html" >站点源</a>
+    <a href="/串扰隔离.html" >串扰隔离</a>
     <a href="/栏规.html" >栏规</a>
   </div></nav>
 
